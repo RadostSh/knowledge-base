@@ -8,6 +8,7 @@ from knowledge.manager import KnowledgeManager
 from knowledge.models import KnowledgeBaseError, KnowledgeItem
 
 Handler = Callable[[KnowledgeManager, argparse.Namespace], None]
+MAX_ID = 2**63 - 1  # largest value SQLite can store as INTEGER
 
 
 def _positive_int(value: str) -> int:
@@ -16,7 +17,7 @@ def _positive_int(value: str) -> int:
         number = int(value)
     except ValueError:
         raise argparse.ArgumentTypeError("ID must be a positive integer.") from None
-    if number <= 0:
+    if not 0 < number <= MAX_ID:
         raise argparse.ArgumentTypeError("ID must be a positive integer.")
     return number
 
@@ -43,6 +44,11 @@ def _cmd_show(manager: KnowledgeManager, args: argparse.Namespace) -> None:
     item = manager.get_item(args.id)
     print(f"Title: {item.title}")
     print(item.content)
+
+
+def _cmd_edit(manager: KnowledgeManager, args: argparse.Namespace) -> None:
+    item = manager.update_item(args.id, title=args.title, content=args.content)
+    print(f"Updated item {item.id}: {item.title}")
 
 
 def _cmd_search(manager: KnowledgeManager, args: argparse.Namespace) -> None:
@@ -83,6 +89,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     show.add_argument("id", type=_positive_int, help="item ID")
     show.set_defaults(handler=_cmd_show)
+
+    edit = subparsers.add_parser(
+        "edit",
+        help="edit an existing item",
+        description="Change the title and/or content of an item. Fields not given stay unchanged.",
+    )
+    edit.add_argument("id", type=_positive_int, help="item ID")
+    edit.add_argument("-t", "--title", default=None, help="new item title")
+    edit.add_argument("-c", "--content", default=None, help="new item content")
+    edit.set_defaults(handler=_cmd_edit)
 
     search = subparsers.add_parser(
         "search",

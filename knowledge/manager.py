@@ -40,6 +40,29 @@ class KnowledgeManager:
             raise ValidationError("Search query cannot be empty.")
         return self.storage.search(query)
 
+    def update_item(
+        self, item_id: int, title: str | None = None, content: str | None = None
+    ) -> KnowledgeItem:
+        """Update the title and/or content of an existing item."""
+        if title is None and content is None:
+            raise ValidationError("At least one of title or content must be provided.")
+        if title is not None:
+            title = title.strip()
+            if not title:
+                raise ValidationError("Title cannot be empty.")
+        if content is not None:
+            content = content.strip()
+            if not content:
+                raise ValidationError("Content cannot be empty.")
+
+        existing = self.get_item(item_id)
+        new_title = title if title is not None else existing.title
+        new_content = content if content is not None else existing.content
+        updated = self.storage.update(item_id, new_title, new_content)
+        if updated is None:
+            raise ItemNotFoundError(f"Item with id {item_id} not found.")
+        return updated
+
     def delete_item(self, item_id: int) -> None:
         """Delete the item with the given ID or raise ItemNotFoundError."""
         if not self.storage.delete(item_id):

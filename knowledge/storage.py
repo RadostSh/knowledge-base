@@ -110,6 +110,16 @@ class SqliteStorage:
             ).fetchall()
         return [self._row_to_item(row) for row in rows]
 
+    def update(self, item_id: int, title: str, content: str) -> KnowledgeItem | None:
+        """Replace an item's title and content; return None if the ID does not exist."""
+        with self._connect("write to") as conn:
+            cursor = conn.execute(
+                "UPDATE items SET title = ?, content = ? WHERE id = ?", (title, content, item_id)
+            )
+            if cursor.rowcount == 0:
+                return None
+        return KnowledgeItem(id=item_id, title=title, content=content)
+
     def delete(self, item_id: int) -> bool:
         """Delete the item with the given ID; return True if a row was deleted."""
         with self._connect("write to") as conn:

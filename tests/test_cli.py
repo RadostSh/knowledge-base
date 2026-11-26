@@ -74,11 +74,38 @@ def test_corrupted_database(capsys: pytest.CaptureFixture[str], db_path: Path) -
     assert "Traceback" not in err
 
 
+def test_edit_happy_path(capsys: pytest.CaptureFixture[str]) -> None:
+    run(capsys, "add", "Old Title", "Old Content")
+
+    assert run(capsys, "edit", "1", "--title", "New Title") == (0, "Updated item 1: New Title\n", "")
+    assert run(capsys, "edit", "1", "-c", "New Content") == (0, "Updated item 1: New Title\n", "")
+    assert run(capsys, "show", "1") == (0, "Title: New Title\nNew Content\n", "")
+
+
+@pytest.mark.parametrize(
+    ("argv", "message"),
+    [
+        (["edit", "999", "--title", "New"], "Item with id 999 not found."),
+        (["edit", "1"], "At least one of title or content must be provided."),
+        (["edit", "1", "--title", "   "], "Title cannot be empty."),
+    ],
+)
+def test_edit_errors(capsys: pytest.CaptureFixture[str], argv: list[str], message: str) -> None:
+    run(capsys, "add", "Title", "Content")
+
+    code, out, err = run(capsys, *argv)
+
+    assert code == 1
+    assert out == ""
+    assert err == f"Error: {message}\n"
+    assert "Traceback" not in err
+
+
 def test_help_lists_all_commands(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc_info:
         main(["--help"])
 
     out = capsys.readouterr().out
     assert exc_info.value.code == 0
-    for command in ("add", "list", "show", "search", "delete"):
+    for command in ("add", "list", "show", "edit", "search", "delete"):
         assert command in out

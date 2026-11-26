@@ -54,6 +54,23 @@ def test_delete_existing_and_missing(storage: SqliteStorage) -> None:
     assert storage.delete(12345) is False
 
 
+def test_update_existing_persists(storage: SqliteStorage, db_path: Path) -> None:
+    item = storage.add("Old title", "Old content")
+    other = storage.add("Other", "untouched")
+
+    updated = storage.update(item.id, "New title", "New content")
+
+    expected = KnowledgeItem(item.id, "New title", "New content")
+    assert updated == expected
+    assert SqliteStorage(db_path).get_by_id(item.id) == expected
+    assert storage.get_by_id(other.id) == other
+
+
+def test_update_missing_returns_none(storage: SqliteStorage) -> None:
+    assert storage.update(999, "t", "c") is None
+    assert storage.list_all() == []
+
+
 def test_search_matches_title(storage: SqliteStorage) -> None:
     hit = storage.add("Python tips", "use venv")
     storage.add("Cooking", "boil water")

@@ -117,3 +117,54 @@ def test_storage_error_propagates(manager: KnowledgeManager, db_path: Path) -> N
 
     with pytest.raises(StorageError):
         manager.list_items()
+
+
+def test_update_title_only(manager: KnowledgeManager) -> None:
+    item = manager.add_item("Old title", "Content")
+
+    updated = manager.update_item(item.id, title="New title")
+
+    assert updated == KnowledgeItem(item.id, "New title", "Content")
+    assert manager.get_item(item.id) == updated
+
+
+def test_update_content_only(manager: KnowledgeManager) -> None:
+    item = manager.add_item("Title", "Old content")
+
+    updated = manager.update_item(item.id, content="New content")
+
+    assert updated == KnowledgeItem(item.id, "Title", "New content")
+    assert manager.get_item(item.id) == updated
+
+
+def test_update_both_values_are_stripped(manager: KnowledgeManager) -> None:
+    item = manager.add_item("Title", "Content")
+
+    updated = manager.update_item(item.id, title="  New title \n", content="\t New content ")
+
+    assert updated == KnowledgeItem(item.id, "New title", "New content")
+    assert manager.get_item(item.id) == updated
+
+
+def test_update_without_fields_raises(manager: KnowledgeManager) -> None:
+    item = manager.add_item("Title", "Content")
+
+    with pytest.raises(ValidationError, match="At least one of title or content must be provided."):
+        manager.update_item(item.id)
+
+
+@pytest.mark.parametrize("field", ["title", "content"])
+@pytest.mark.parametrize("value", BLANK_VALUES)
+def test_update_blank_field_raises_and_keeps_item(
+    manager: KnowledgeManager, field: str, value: str
+) -> None:
+    item = manager.add_item("Title", "Content")
+
+    with pytest.raises(ValidationError, match=f"{field.capitalize()} cannot be empty."):
+        manager.update_item(item.id, **{field: value})
+    assert manager.get_item(item.id) == item
+
+
+def test_update_missing_raises(manager: KnowledgeManager) -> None:
+    with pytest.raises(ItemNotFoundError, match="Item with id 999 not found."):
+        manager.update_item(999, title="New title")
