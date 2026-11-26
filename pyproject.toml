@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knowledge-base-cli"
+version = "0.1.0"
+description = "A command-line knowledge base."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+knowledge = "knowledge.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["knowledge*"]
