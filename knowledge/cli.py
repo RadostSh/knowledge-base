@@ -52,6 +52,14 @@ def _cmd_edit(manager: KnowledgeManager, args: argparse.Namespace) -> None:
 
 
 def _cmd_search(manager: KnowledgeManager, args: argparse.Namespace) -> None:
+    if args.ranked:
+        results = manager.search_ranked(args.query)
+        if not results:
+            print("No matching items found.")
+            return
+        for item, score in results:
+            print(f"{item.id} {item.title} ({score:.2f})")
+        return
     _print_items(manager.search_items(args.query), "No matching items found.")
 
 
@@ -103,9 +111,19 @@ def build_parser() -> argparse.ArgumentParser:
     search = subparsers.add_parser(
         "search",
         help="search items by title or content",
-        description="Find items whose title or content contains the query (case-insensitive).",
+        description=(
+            "Find items whose title or content contains the query as any substring "
+            "(case-insensitive). With --ranked, match whole words only and order "
+            "results by relevance."
+        ),
     )
     search.add_argument("query", help="text to search for")
+    search.add_argument(
+        "-r",
+        "--ranked",
+        action="store_true",
+        help="rank results by relevance (matches whole words)",
+    )
     search.set_defaults(handler=_cmd_search)
 
     delete = subparsers.add_parser(
