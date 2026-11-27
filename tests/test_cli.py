@@ -34,6 +34,53 @@ def test_empty_states(capsys: pytest.CaptureFixture[str]) -> None:
     assert run(capsys, "search", "anything") == (0, "No matching items found.\n", "")
 
 
+def _add_search_corpus(capsys: pytest.CaptureFixture[str]) -> None:
+    run(capsys, "add", "Docker", "Docker containers and images")
+    run(capsys, "add", "Kubernetes", "Runs docker containers at scale")
+    run(capsys, "add", "Cooking", "Boil water")
+
+
+@pytest.mark.parametrize("flag", ["--ranked", "-r"])
+def test_search_ranked_happy_path(capsys: pytest.CaptureFixture[str], flag: str) -> None:
+    _add_search_corpus(capsys)
+
+    assert run(capsys, "search", flag, "docker") == (
+        0,
+        "1 Docker (0.82)\n2 Kubernetes (0.27)\n",
+        "",
+    )
+    assert run(capsys, "search", flag, "docker containers") == (
+        0,
+        "1 Docker (0.77)\n2 Kubernetes (0.38)\n",
+        "",
+    )
+    assert run(capsys, "search", "water", flag) == (0, "3 Cooking (0.41)\n", "")
+
+
+def test_search_ranked_no_matches(capsys: pytest.CaptureFixture[str]) -> None:
+    _add_search_corpus(capsys)
+    # "dock" is a substring of "Docker" but not a whole word.
+    assert run(capsys, "search", "--ranked", "dock") == (0, "No matching items found.\n", "")
+    assert run(capsys, "search", "--ranked", "rust") == (0, "No matching items found.\n", "")
+
+
+@pytest.mark.parametrize("query", ["", "   "])
+def test_search_ranked_blank_query(capsys: pytest.CaptureFixture[str], query: str) -> None:
+    assert run(capsys, "search", "--ranked", query) == (
+        1,
+        "",
+        "Error: Search query cannot be empty.\n",
+    )
+
+
+def test_plain_search_unchanged(capsys: pytest.CaptureFixture[str]) -> None:
+    _add_search_corpus(capsys)
+    # Substring matching, ordered by ID, no scores.
+    assert run(capsys, "search", "dock") == (0, "1 Docker\n2 Kubernetes\n", "")
+    assert run(capsys, "search", "WATER") == (0, "3 Cooking\n", "")
+    assert run(capsys, "search", "rust") == (0, "No matching items found.\n", "")
+
+
 @pytest.mark.parametrize("command", ["show", "delete"])
 def test_missing_id(capsys: pytest.CaptureFixture[str], command: str) -> None:
     code, out, err = run(capsys, command, "999")

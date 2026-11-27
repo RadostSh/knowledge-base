@@ -1,6 +1,7 @@
 """Business logic for the knowledge base: validation on top of storage."""
 
 from knowledge.models import ItemNotFoundError, KnowledgeItem, ValidationError
+from knowledge.ranking import rank_items
 from knowledge.storage import SqliteStorage
 
 
@@ -39,6 +40,13 @@ class KnowledgeManager:
         if not query:
             raise ValidationError("Search query cannot be empty.")
         return self.storage.search(query)
+
+    def search_ranked(self, query: str) -> list[tuple[KnowledgeItem, float]]:
+        """Return (item, score) pairs ordered by relevance to the query, best first."""
+        query = query.strip()
+        if not query:
+            raise ValidationError("Search query cannot be empty.")
+        return rank_items(query, self.list_items())
 
     def update_item(
         self, item_id: int, title: str | None = None, content: str | None = None

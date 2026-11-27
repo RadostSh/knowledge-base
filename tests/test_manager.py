@@ -96,6 +96,35 @@ def test_search_query_is_stripped(manager: KnowledgeManager) -> None:
     assert manager.search_items("  python tips  ") == [hit]
 
 
+def test_search_ranked_orders_by_relevance(manager: KnowledgeManager) -> None:
+    best = manager.add_item("Docker", "Docker containers and images")
+    other = manager.add_item("Kubernetes", "Runs docker containers at scale")
+    manager.add_item("Cooking", "Boil water")
+
+    results = manager.search_ranked("docker")
+
+    assert [item for item, _ in results] == [best, other]
+    assert all(isinstance(score, float) for _, score in results)
+    assert results[0][1] > results[1][1]
+
+
+def test_search_ranked_query_is_stripped(manager: KnowledgeManager) -> None:
+    manager.add_item("Docker", "Containers")
+
+    assert manager.search_ranked("  docker \n") == manager.search_ranked("docker")
+    assert len(manager.search_ranked("\tdocker ")) == 1
+
+
+@pytest.mark.parametrize("query", BLANK_VALUES)
+def test_search_ranked_blank_query_raises(manager: KnowledgeManager, query: str) -> None:
+    with pytest.raises(ValidationError, match="Search query cannot be empty."):
+        manager.search_ranked(query)
+
+
+def test_search_ranked_empty_database(manager: KnowledgeManager) -> None:
+    assert manager.search_ranked("docker") == []
+
+
 def test_delete_existing(manager: KnowledgeManager) -> None:
     item = manager.add_item("Title", "Content")
 
